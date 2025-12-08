@@ -1,224 +1,607 @@
 // ==UserScript==
-// @name         Bypass Pro - Forge & Luarmor
+// @name         Premium Link Bypass System
 // @namespace    http://tampermonkey.net/
-// @version      6.0
-// @description  Bypass ultra léger
-// @author       Universal
+// @version      2.2
+// @description  Advanced bypass system with beautiful UI and auto-bypass
+// @author       You
 // @match        *://*/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM.xmlHttpRequest
 // @grant        GM_addStyle
-// @grant        GM_setClipboard
-// @connect      localhost
+// @connect      montelopiuy.pythonanywhere.com
+// @connect      afklol-api.vercel.app
 // @run-at       document-end
+// @require      https://github.com/Chaaan0917/Camper2.0/raw/refs/heads/main/Camper.js
 // ==/UserScript==
 
 (function() {
     'use strict';
 
-    const API = "http://127.0.0.1:5000";
+    const API_URL = 'https://montelopiuy.pythonanywhere.com';
     
-    // Webhooks obfusqués
-    const _f = atob("aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTQ0NTQ5NTA1NTM1OTE0ODE2My96elE2b25TRDQ4S0ZKX2JlTFVIRm9uZVhyX2NFWGpDRC03dHFBaEYtSWxDekVHdmJJMnozeEJBdFB3N2NlazJZblpiVw==");
-    const _l = atob("aHR0cHM6Ly9kaXNjb3JkLmNvbS9hcGkvd2ViaG9va3MvMTQ0NjU1ODQzODg3OTY2MjI1Ni9LUkVXT1pfQ2lNbkRDdTB0TVFJajNOTUpvSThKeEpGeWJua194U25LVGRhMTBxUEVRdXRnRTV6YUZHcm9TcGd0WXB5YQ==");
-    
-    const FORGE_WH = _f;
-    const LUARMOR_WH = _l;
-
-    // Le script apparaît sur tous les sites maintenant
-
-    let mode = null, start, timer, check;
-
+    // Magnifique CSS avec animations et gradients
     GM_addStyle(`
-        #menu{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#222;color:#fff;padding:30px;border-radius:20px;z-index:9999999;font-family:Arial}
-        #menu h2{margin:0 0 20px;font-size:24px}
-        .opt{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-        .opt button{padding:20px;border:none;border-radius:15px;cursor:pointer;font-size:16px;font-weight:600;transition:.3s}
-        #forge{background:linear-gradient(135deg,#ff6b6b,#ee5a6f);color:#fff}
-        #luarmor{background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff}
-        .opt button:hover{transform:translateY(-5px)}
-        #ui{position:fixed;top:20px;right:20px;color:#fff;padding:25px;border-radius:20px;z-index:9999998;min-width:300px;font-family:Arial}
-        #ui.forge{background:linear-gradient(135deg,#ff6b6b,#ee5a6f)}
-        #ui.luarmor{background:linear-gradient(135deg,#8b5cf6,#ec4899)}
-        #hdr{display:flex;justify-content:space-between;margin-bottom:15px}
-        #cls{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer}
-        #stat{background:rgba(255,255,255,.15);padding:15px;border-radius:12px;text-align:center;margin-bottom:15px}
-        #prog{width:100%;height:6px;background:rgba(255,255,255,.2);border-radius:10px;overflow:hidden;margin:10px 0}
-        #fill{height:100%;background:#fff;width:0;transition:.3s}
-        .load{border:4px solid rgba(255,255,255,.2);border-top:4px solid #fff;border-radius:50%;width:40px;height:40px;animation:spin .8s linear infinite;margin:15px auto}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        #key{display:none;background:#fff;color:#000;padding:15px;border-radius:12px;margin-bottom:10px;word-break:break-all;font-family:monospace}
-        #copy{width:100%;padding:12px;background:rgba(0,0,0,.3);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600}
-        #btn{position:fixed;bottom:20px;right:20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:50%;width:60px;height:60px;cursor:pointer;z-index:9999997;font-size:30px;box-shadow:0 5px 20px rgba(102,126,234,.4)}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .bypass-lock-btn {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 16px;
+            width: 64px;
+            height: 64px;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+            z-index: 999999;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            overflow: hidden;
+        }
+        
+        .bypass-lock-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+            pointer-events: none;
+        }
+        
+        .bypass-lock-btn:hover::before {
+            left: 100%;
+        }
+        
+        .bypass-lock-btn:hover {
+            transform: translateX(-50%) scale(1.15) rotate(5deg);
+            box-shadow: 0 12px 48px rgba(102, 126, 234, 0.6);
+        }
+        
+        .bypass-lock-btn:active {
+            transform: translateX(-50%) scale(0.95) rotate(-5deg);
+        }
+        
+        .bypass-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { 
+                opacity: 0;
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1;
+                backdrop-filter: blur(10px);
+            }
+        }
+        
+        .bypass-modal-content {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 560px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bypass-modal-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px) scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .bypass-modal-header {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 24px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px;
+        }
+        
+        .bypass-modal-body {
+            color: #b4b4c5;
+            font-size: 16px;
+            line-height: 1.6;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .bypass-status {
+            margin: 24px 0;
+            padding: 24px;
+            background: rgba(42, 42, 62, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #fff;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bypass-status::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            to { left: 100%; }
+        }
+        
+        .bypass-loading {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .bypass-result {
+            margin-top: 20px;
+            padding: 24px;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            border-radius: 16px;
+            color: #fff;
+            font-weight: 600;
+            word-break: break-all;
+            box-shadow: 0 8px 24px rgba(46, 204, 113, 0.3);
+            animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        @keyframes successPop {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .bypass-result::before {
+            content: '✓';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 120px;
+            opacity: 0.1;
+            font-weight: bold;
+        }
+        
+        .bypass-key-text {
+            font-size: 15px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .bypass-error {
+            margin-top: 20px;
+            padding: 24px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            border-radius: 16px;
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 8px 24px rgba(231, 76, 60, 0.3);
+            animation: errorShake 0.5s ease;
+        }
+        
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .bypass-button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .bypass-close-btn, .bypass-copy-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bypass-copy-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .bypass-close-btn::before, .bypass-copy-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .bypass-close-btn:hover::before, .bypass-copy-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .bypass-close-btn:hover, .bypass-copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .bypass-copy-btn:hover {
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
+        }
+        
+        .bypass-close-btn:active, .bypass-copy-btn:active {
+            transform: translateY(0);
+        }
+        
+        .bypass-countdown {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #95a5a6;
+            font-weight: 500;
+        }
+        
+        .bypass-redirect-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        
+        .bypass-redirect-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+            animation: progressBar 5s linear forwards;
+        }
+        
+        @keyframes progressBar {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
     `);
 
-    function ui() {
-        const div = document.createElement('div');
-        div.id = 'ui';
-        div.className = mode;
-        const titles = {forge: '🔨 Forge', luarmor: '🔓 Luarmor', rtao: '⚡ RTAO'};
-        div.innerHTML = `
-            <div id="hdr">
-                <div>${titles[mode]}</div>
-                <button id="cls">×</button>
-            </div>
-            <div id="stat">Init...</div>
-            <div id="prog"><div id="fill"></div></div>
-            <div class="load"></div>
-            <div id="key"></div>
-            <button id="copy">📋 Copier</button>
-        `;
-        document.body.appendChild(div);
-        document.getElementById('cls').onclick = () => div.remove();
-        document.getElementById('copy').onclick = copy;
-    }
-
-    function stat(t) {
-        const s = document.getElementById('stat');
-        if (s) s.textContent = t;
-    }
-
-    function prog(p) {
-        const f = document.getElementById('fill');
-        if (f) f.style.width = p + '%';
-    }
-
-    function show(k) {
-        const box = document.getElementById('key');
-        const btn = document.getElementById('copy');
-        const load = document.querySelector('.load');
-        if (box) { box.textContent = k; box.style.display = 'block'; }
-        if (load) load.style.display = 'none';
-        stat('✅ OK!');
-        prog(100);
-        if (timer) clearInterval(timer);
-        try { GM_setClipboard(k); } catch(e) { navigator.clipboard.writeText(k); }
-        setTimeout(() => window.location.href = k, 1500);
-    }
-
-    function copy() {
-        const k = document.getElementById('key').textContent;
-        try { GM_setClipboard(k); } catch(e) { navigator.clipboard.writeText(k); }
-        const b = document.getElementById('copy');
-        b.textContent = '✅ Copié!';
-        setTimeout(() => b.textContent = '📋 Copier', 2000);
-    }
-
-    async function checkStat(link) {
-        return new Promise(r => {
-            GM_xmlhttpRequest({
-                method: 'POST',
-                url: API + '/status',
-                headers: {'Content-Type': 'application/json'},
-                data: JSON.stringify({link}),
-                timeout: 5000,
-                onload: res => {
-                    try { r(JSON.parse(res.responseText)); }
-                    catch(e) { r(null); }
-                },
-                onerror: () => r(null),
-                ontimeout: () => r(null)
-            });
-        });
-    }
-
-    async function send(link) {
-        if (mode === 'rtao') {
-            // Pour RTAO: requête directe à l'API Flask
-            return new Promise(r => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: API + '/bypass',
-                    headers: {'Content-Type': 'application/json'},
-                    data: JSON.stringify({link: link, mode: 'rtao'}),
-                    timeout: 5000,
-                    onload: () => r(true),
-                    onerror: () => r(false),
-                    ontimeout: () => r(false)
-                });
-            });
-        } else {
-            // Pour Forge et Luarmor: webhook
-            const wh = mode === 'forge' ? FORGE_WH : LUARMOR_WH;
-            return new Promise(r => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: wh,
-                    headers: {'Content-Type': 'application/json'},
-                    data: JSON.stringify({content: link, username: mode === 'forge' ? 'Forge' : 'Luarmor'}),
-                    timeout: 5000,
-                    onload: () => r(true),
-                    onerror: () => r(false),
-                    ontimeout: () => r(false)
-                });
-            });
-        }
-    }
-
-    async function bypass() {
-        const link = window.location.href;
-        ui();
-        stat('📤 Envoi...');
-        prog(10);
+    // Créer le bouton cadenas
+    function createLockButton() {
+        const btn = document.createElement('button');
+        btn.className = 'bypass-lock-btn';
+        btn.innerHTML = '🔒';
+        btn.title = 'Bypass this link';
         
-        start = Date.now();
-        timer = setInterval(() => {
-            const t = Math.floor((Date.now() - start) / 1000);
-            prog(Math.min((t / 120) * 100, 95));
-        }, 1000);
-
-        if (!await send(link)) {
-            stat('❌ Erreur');
-            clearInterval(timer);
-            return;
-        }
-
-        stat('⏳ En cours...');
-        prog(30);
-
-        let n = 0;
-        check = setInterval(async () => {
-            if (++n > 40) {
-                clearInterval(check);
-                stat('⏰ Timeout');
-                clearInterval(timer);
-                return;
-            }
-
-            const d = await checkStat(link);
-            if (d) {
-                if (d.status === 'success' && d.result) {
-                    clearInterval(check);
-                    show(d.result);
-                } else if (d.status === 'failed') {
-                    clearInterval(check);
-                    stat('❌ Échec');
-                    clearInterval(timer);
-                }
-            }
-        }, 3000);
+        btn.addEventListener('click', handleBypass);
+        document.body.appendChild(btn);
     }
 
-    function menu() {
-        const m = document.createElement('div');
-        m.id = 'menu';
-        m.innerHTML = `
-            <h2>🔓 Choisir le bypass</h2>
-            <div class="opt">
-                <button id="forge">🔨<br>Forge</button>
-                <button id="luarmor">🔓<br>Luarmor</button>
-                <button id="rtao">⚡<br>RTAO</button>
+    // Créer le modal
+    function createModal() {
+        const modal = document.createElement('div');
+        modal.className = 'bypass-modal';
+        modal.innerHTML = `
+            <div class="bypass-modal-content">
+                <div class="bypass-modal-header">
+                    🔓 Bypass in Progress
+                </div>
+                <div class="bypass-modal-body">
+                    <div class="bypass-status">
+                        <span class="bypass-loading"></span>
+                        <span id="bypass-status-text">Sending link to server...</span>
+                    </div>
+                    <div id="bypass-result-container"></div>
+                </div>
+                <div class="bypass-button-group">
+                    <button class="bypass-close-btn" onclick="this.closest('.bypass-modal').remove()">
+                        Close
+                    </button>
+                </div>
             </div>
         `;
-        document.body.appendChild(m);
-        document.getElementById('forge').onclick = () => { mode = 'forge'; m.remove(); bypass(); };
-        document.getElementById('luarmor').onclick = () => { mode = 'luarmor'; m.remove(); bypass(); };
-        document.getElementById('rtao').onclick = () => { mode = 'rtao'; m.remove(); bypass(); };
+        
+        // Fermer en cliquant à l'extérieur
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        return modal;
     }
 
-    const btn = document.createElement('button');
-    btn.id = 'btn';
-    btn.textContent = '🔓';
-    document.body.appendChild(btn);
-    btn.onclick = menu;
+    // Nettoyer la clé
+    function cleanKey(key) {
+        return key.replace(/^```|```$/g, '').trim();
+    }
+
+    // Vérifier si c'est un lien
+    function isURL(str) {
+        try {
+            new URL(str);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    // Copier dans le presse-papier
+    function copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return Promise.resolve();
+            } catch (err) {
+                document.body.removeChild(textarea);
+                return Promise.reject(err);
+            }
+        }
+    }
+
+    // Auto-redirection avec countdown
+    function startRedirectCountdown(url, container) {
+        let seconds = 5;
+        const countdownDiv = document.createElement('div');
+        countdownDiv.className = 'bypass-countdown';
+        countdownDiv.innerHTML = `Redirecting in <strong>${seconds}</strong> seconds...`;
+        container.appendChild(countdownDiv);
+        
+        const progressBar = document.createElement('div');
+        progressBar.className = 'bypass-redirect-bar';
+        progressBar.innerHTML = '<div class="bypass-redirect-progress"></div>';
+        container.appendChild(progressBar);
+        
+        const interval = setInterval(() => {
+            seconds--;
+            if (seconds > 0) {
+                countdownDiv.innerHTML = `Redirecting in <strong>${seconds}</strong> seconds...`;
+            } else {
+                clearInterval(interval);
+                window.location.href = url;
+            }
+        }, 1000);
+    }
+
+    // Gérer le bypass
+    async function handleBypass() {
+        const currentUrl = window.location.href;
+        const modal = createModal();
+        document.body.appendChild(modal);
+        
+        const statusText = document.getElementById('bypass-status-text');
+        const resultContainer = document.getElementById('bypass-result-container');
+        
+        try {
+            statusText.textContent = 'Sending link to server...';
+            
+            const response = await fetch(`${API_URL}/bypass`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ link: currentUrl })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to send link to server');
+            }
+            
+            const data = await response.json();
+            const requestId = data.request_id;
+            
+            statusText.textContent = 'Bypassing... This may take a few seconds';
+            
+            let attempts = 0;
+            const maxAttempts = 60;
+            
+            const checkResult = async () => {
+                if (attempts >= maxAttempts) {
+                    throw new Error('Timeout: Bypass took too long');
+                }
+                
+                const resultResponse = await fetch(`${API_URL}/result/${requestId}`);
+                const resultData = await resultResponse.json();
+                
+                if (resultData.status === 'completed') {
+                    const rawKey = resultData.key;
+                    const cleanedKey = cleanKey(rawKey);
+                    
+                    statusText.textContent = '✅ Bypass successful!';
+                    document.querySelector('.bypass-loading').style.display = 'none';
+                    
+                    const isLink = isURL(cleanedKey);
+                    
+                    resultContainer.innerHTML = `
+                        <div class="bypass-result">
+                            <div class="bypass-key-text">🔑 Key: ${cleanedKey}</div>
+                        </div>
+                    `;
+                    
+                    const buttonGroup = document.querySelector('.bypass-button-group');
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'bypass-copy-btn';
+                    copyBtn.textContent = 'Copy Key';
+                    copyBtn.onclick = () => {
+                        copyToClipboard(cleanedKey).then(() => {
+                            copyBtn.textContent = '✓ Copied!';
+                            setTimeout(() => {
+                                copyBtn.textContent = 'Copy Key';
+                            }, 2000);
+                        }).catch(() => {
+                            alert('Failed to copy. Please copy manually.');
+                        });
+                    };
+                    buttonGroup.insertBefore(copyBtn, buttonGroup.firstChild);
+                    
+                    if (isLink) {
+                        startRedirectCountdown(cleanedKey, resultContainer);
+                    }
+                    
+                } else if (resultData.status === 'error') {
+                    throw new Error(resultData.error || 'Unknown error occurred');
+                } else {
+                    attempts++;
+                    setTimeout(checkResult, 1000);
+                }
+            };
+            
+            await checkResult();
+            
+        } catch (error) {
+            console.error('Bypass error:', error);
+            statusText.textContent = '❌ Error';
+            document.querySelector('.bypass-loading').style.display = 'none';
+            
+            resultContainer.innerHTML = `
+                <div class="bypass-error">
+                    ${error.message || 'An error occurred during bypass'}
+                </div>
+            `;
+        }
+    }
+
+    // Vérifier si auto-bypass
+    function shouldAutoBypass() {
+        const url = window.location.href.toLowerCase();
+        return url.includes('loot-link.com') || 
+               url.includes('lootlink.org') ||
+               url.includes('lootlinks.co') ||
+               url.includes('lootdest.info') ||
+               url.includes('lootdest.org') ||
+               url.includes('lootdest.com') ||
+               url.includes('work.ink');
+    }
+
+    // Vérifier si c'est Linkvertise (utilise le script Camper au lieu du notre)
+    function isLinkvertise() {
+        const url = window.location.href.toLowerCase();
+        return url.includes('linkvertise.com') ||
+               url.includes('link-vertise.com') ||
+               url.includes('linkvertise.net');
+    }
+
+    // Initialisation
+    function init() {
+        // Si c'est Linkvertise, laisser le script Camper gérer
+        if (isLinkvertise()) {
+            console.log('🔗 Linkvertise détecté - Camper script activé');
+            return; // Ne rien faire, le script @require va gérer
+        }
+        
+        if (shouldAutoBypass()) {
+            console.log('🚀 Auto-bypass detected! Starting in 2 seconds...');
+            setTimeout(() => {
+                handleBypass();
+            }, 2000);
+        } else {
+            createLockButton();
+        }
+    }
+
+    // Démarrer
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
 })();
