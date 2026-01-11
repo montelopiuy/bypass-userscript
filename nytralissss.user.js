@@ -7,8 +7,8 @@
 // @match        *://*.linkvertise.com/*
 // @match        *://*.work.ink/*
 // @match        *://.lootdest.org/*
-// @match         *:/loot-links.com/*
-// @match         *:/loot-link.com/*
+// @match         *://loot-links.com/*
+// @match         *://loot-link.com/*
 // @grant        none
 // @run-at       document-end
 // @require      https://raw.githubusercontent.com/montelopiuy/bypass-userscript/refs/heads/main/camper-bypass-1.7.user.js
