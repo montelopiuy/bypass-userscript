@@ -1,0 +1,681 @@
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- Configuration
+local MAX_PAGES = 5  -- 5 pages × 20 résultats = 100 scripts maximum
+local CurrentPage = 1
+local AllScriptsData = {}
+local Loading = false
+local CurrentSearch = ""
+local CurrentSort = "updatedAt"
+local CurrentType = ""
+
+-- Fonction HTTP améliorée
+local function HttpGet(url)
+    local success, result = pcall(function()
+        if syn and syn.request then
+            local response = syn.request({
+                Url = url,
+                Method = "GET",
+                Headers = {
+                    ["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                }
+            })
+            return response.Body
+        elseif request then
+            return request({Url = url, Method = "GET"}).Body
+        elseif http_request then
+            return http_request({Url = url, Method = "GET"}).Body
+        else
+            return game:HttpGetAsync(url)
+        end
+    end)
+    
+    return success and result or nil
+end
+
+-- Création de l'interface
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PowerErectersFullHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 800, 0, 700)
+MainFrame.Position = UDim2.new(0.5, -400, 0.5, -350)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+MainFrame.BorderColor3 = Color3.fromRGB(255, 42, 42)
+MainFrame.BorderSizePixel = 2
+MainFrame.Parent = ScreenGui
+
+-- Barre de titre
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 60)
+TitleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TitleBar.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -100, 0, 40)
+Title.Position = UDim2.new(0, 20, 0, 10)
+Title.BackgroundTransparency = 1
+Title.Text = "🔍 POWER ERECTERS SCRIPT HUB"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 24
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Size = UDim2.new(1, -100, 0, 20)
+SubTitle.Position = UDim2.new(0, 20, 0, 40)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "Affiche TOUS les résultats - Powered by ScriptBlox"
+SubTitle.TextColor3 = Color3.fromRGB(255, 42, 42)
+SubTitle.Font = Enum.Font.Gotham
+SubTitle.TextSize = 12
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.Parent = TitleBar
+
+-- Bouton fermer
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -50, 0.5, -20)
+CloseButton.BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 20
+CloseButton.Parent = TitleBar
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Barre de recherche améliorée
+local SearchContainer = Instance.new("Frame")
+SearchContainer.Size = UDim2.new(1, -40, 0, 80)
+SearchContainer.Position = UDim2.new(0, 20, 0, 80)
+SearchContainer.BackgroundTransparency = 1
+SearchContainer.Parent = MainFrame
+
+local SearchBox = Instance.new("TextBox")
+SearchBox.Size = UDim2.new(0.65, -10, 0, 50)
+SearchBox.Position = UDim2.new(0, 0, 0, 0)
+SearchBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+SearchBox.BorderColor3 = Color3.fromRGB(70, 70, 70)
+SearchBox.BorderSizePixel = 1
+SearchBox.PlaceholderText = "Exemple: blox fruits, admin, arsenal, adopt me..."
+SearchBox.Text = ""
+SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchBox.Font = Enum.Font.Gotham
+SearchBox.TextSize = 16
+SearchBox.ClearTextOnFocus = false
+SearchBox.Parent = SearchContainer
+
+local SearchButton = Instance.new("TextButton")
+SearchButton.Size = UDim2.new(0.35, -10, 0, 50)
+SearchButton.Position = UDim2.new(0.65, 10, 0, 0)
+SearchButton.BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+SearchButton.Text = "🚀 TOUT CHERCHER"
+SearchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchButton.Font = Enum.Font.GothamBlack
+SearchButton.TextSize = 16
+SearchButton.Parent = SearchContainer
+
+-- Filtres rapides
+local QuickFilters = Instance.new("Frame")
+QuickFilters.Size = UDim2.new(1, -40, 0, 30)
+QuickFilters.Position = UDim2.new(0, 20, 0, 170)
+QuickFilters.BackgroundTransparency = 1
+QuickFilters.Parent = MainFrame
+
+local filters = {
+    {Text = "🎮 Tous les jeux", Type = "", Icon = "🎮"},
+    {Text = "🆓 Gratuits", Type = "free", Icon = "🆓"},
+    {Text = "⭐ Premium", Type = "paid", Icon = "⭐"},
+    {Text = "✅ Vérifiés", Type = "verified", Icon = "✅"},
+    {Text = "🌐 Universels", Type = "universal", Icon = "🌐"},
+    {Text = "🔥 Populaires", Sort = "likeCount", Icon = "🔥"},
+    {Text = "👁️ Plus vus", Sort = "views", Icon = "👁️"},
+    {Text = "🆕 Récent", Sort = "updatedAt", Icon = "🆕"}
+}
+
+for i, filter in ipairs(filters) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 110, 1, 0)
+    btn.Position = UDim2.new(0, (i-1) * 115, 0, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    btn.Text = filter.Icon .. " " .. string.sub(filter.Text, 3)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    btn.Parent = QuickFilters
+    
+    btn.MouseButton1Click:Connect(function()
+        if filter.Type then
+            CurrentType = filter.Type
+        end
+        if filter.Sort then
+            CurrentSort = filter.Sort
+        end
+        SearchScripts()
+    end)
+end
+
+-- Conteneur de résultats avec scroll horizontal
+local ResultsContainer = Instance.new("ScrollingFrame")
+ResultsContainer.Size = UDim2.new(1, -40, 1, -300)
+ResultsContainer.Position = UDim2.new(0, 20, 0, 210)
+ResultsContainer.BackgroundTransparency = 1
+ResultsContainer.BorderSizePixel = 0
+ResultsContainer.ScrollBarThickness = 8
+ResultsContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 42, 42)
+ResultsContainer.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+ResultsContainer.Parent = MainFrame
+
+local ResultsGrid = Instance.new("UIGridLayout")
+ResultsGrid.CellPadding = UDim2.new(0, 15, 0, 15)
+ResultsGrid.CellSize = UDim2.new(0, 250, 0, 320)
+ResultsGrid.HorizontalAlignment = Enum.HorizontalAlignment.Left
+ResultsGrid.SortOrder = Enum.SortOrder.LayoutOrder
+ResultsGrid.Parent = ResultsContainer
+
+-- Compteur de résultats
+local ResultsCounter = Instance.new("TextLabel")
+ResultsCounter.Size = UDim2.new(1, -40, 0, 40)
+ResultsCounter.Position = UDim2.new(0, 20, 1, -80)
+ResultsCounter.BackgroundTransparency = 1
+ResultsCounter.Text = "Prêt à rechercher"
+ResultsCounter.TextColor3 = Color3.fromRGB(200, 200, 200)
+ResultsCounter.Font = Enum.Font.Gotham
+ResultsCounter.TextSize = 14
+ResultsCounter.Parent = MainFrame
+
+-- Loader avec animation
+local Loader = Instance.new("Frame")
+Loader.Size = UDim2.new(1, 0, 1, 0)
+Loader.Position = UDim2.new(0, 0, 0, 0)
+Loader.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Loader.BackgroundTransparency = 0.8
+Loader.Visible = false
+Loader.ZIndex = 10
+Loader.Parent = MainFrame
+
+local LoaderText = Instance.new("TextLabel")
+LoaderText.Size = UDim2.new(1, 0, 0, 50)
+LoaderText.Position = UDim2.new(0, 0, 0.4, 0)
+LoaderText.BackgroundTransparency = 1
+LoaderText.Text = "Chargement de TOUS les résultats..."
+LoaderText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoaderText.Font = Enum.Font.GothamBold
+LoaderText.TextSize = 20
+LoaderText.ZIndex = 11
+LoaderText.Parent = Loader
+
+local Spinner = Instance.new("Frame")
+Spinner.Size = UDim2.new(0, 60, 0, 60)
+Spinner.Position = UDim2.new(0.5, -30, 0.5, 0)
+Spinner.BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+Spinner.ZIndex = 11
+Spinner.Parent = Loader
+
+-- Fonction pour récupérer TOUTES les pages
+local function SearchScripts()
+    if Loading then return end
+    Loading = true
+    Loader.Visible = true
+    
+    AllScriptsData = {}
+    ResultsContainer:ClearAllChildren()
+    
+    local searchTerm = SearchBox.Text
+    CurrentSearch = searchTerm
+    
+    spawn(function()
+        local allScripts = {}
+        local totalResults = 0
+        
+        -- Construire l'URL de base
+        local baseParams = {
+            "max=20",
+            "sortBy=" .. CurrentSort,
+            "order=desc"
+        }
+        
+        if CurrentType == "free" or CurrentType == "paid" then
+            table.insert(baseParams, "mode=" .. CurrentType)
+        elseif CurrentType == "verified" then
+            table.insert(baseParams, "verified=1")
+        elseif CurrentType == "universal" then
+            table.insert(baseParams, "universal=1")
+        end
+        
+        -- Récupérer la première page pour connaître le total
+        local firstPageUrl
+        if searchTerm == "" then
+            firstPageUrl = "https://scriptblox.com/api/script/fetch?page=1&" .. table.concat(baseParams, "&")
+        else
+            firstPageUrl = "https://scriptblox.com/api/script/search?q=" .. HttpService:UrlEncode(searchTerm) .. 
+                          "&page=1&" .. table.concat(baseParams, "&")
+        end
+        
+        print("Première page URL:", firstPageUrl)
+        
+        local firstResponse = HttpGet(firstPageUrl)
+        
+        if firstResponse then
+            local success, firstData = pcall(function()
+                return HttpService:JSONDecode(firstResponse)
+            end)
+            
+            if success and firstData and firstData.result then
+                local firstScripts = firstData.result.scripts or {}
+                totalResults = #firstScripts
+                
+                -- Ajouter les scripts de la première page
+                for _, script in ipairs(firstScripts) do
+                    table.insert(allScripts, script)
+                end
+                
+                -- Mettre à jour le compteur
+                ResultsCounter.Text = string.format("📊 %d résultats - Chargement des pages suivantes...", #allScripts)
+                
+                -- Récupérer les autres pages (2 à MAX_PAGES)
+                for page = 2, MAX_PAGES do
+                    wait(0.3)  -- Petit délai pour éviter le rate limiting
+                    
+                    local pageUrl
+                    if searchTerm == "" then
+                        pageUrl = "https://scriptblox.com/api/script/fetch?page=" .. page .. "&" .. table.concat(baseParams, "&")
+                    else
+                        pageUrl = "https://scriptblox.com/api/script/search?q=" .. HttpService:UrlEncode(searchTerm) .. 
+                                 "&page=" .. page .. "&" .. table.concat(baseParams, "&")
+                    end
+                    
+                    local pageResponse = HttpGet(pageUrl)
+                    
+                    if pageResponse then
+                        local pageSuccess, pageData = pcall(function()
+                            return HttpService:JSONDecode(pageResponse)
+                        end)
+                        
+                        if pageSuccess and pageData and pageData.result and pageData.result.scripts then
+                            local pageScripts = pageData.result.scripts
+                            
+                            -- Vérifier s'il y a des scripts sur cette page
+                            if #pageScripts == 0 then break end
+                            
+                            -- Ajouter les scripts
+                            for _, script in ipairs(pageScripts) do
+                                table.insert(allScripts, script)
+                            end
+                            
+                            -- Mettre à jour le compteur en temps réel
+                            ResultsCounter.Text = string.format("📊 %d résultats - Page %d/%d", #allScripts, page, MAX_PAGES)
+                        else
+                            break
+                        end
+                    else
+                        break
+                    end
+                end
+                
+                -- Stocker tous les scripts
+                AllScriptsData = allScripts
+                
+                -- Afficher tous les résultats
+                DisplayAllResults()
+                
+                -- Mettre à jour le compteur final
+                ResultsCounter.Text = string.format("✅ %d résultats trouvés pour \"%s\"", #AllScriptsData, 
+                    searchTerm == "" and "scripts récents" or searchTerm)
+                
+            else
+                ResultsCounter.Text = "❌ Erreur de chargement des données"
+            end
+        else
+            ResultsCounter.Text = "❌ Impossible de se connecter à ScriptBlox"
+        end
+        
+        Loading = false
+        Loader.Visible = false
+    end)
+end
+
+-- Fonction pour afficher TOUS les résultats
+local function DisplayAllResults()
+    ResultsContainer:ClearAllChildren()
+    
+    if #AllScriptsData == 0 then
+        local NoResults = Instance.new("TextLabel")
+        NoResults.Size = UDim2.new(1, 0, 0, 100)
+        NoResults.Position = UDim2.new(0, 0, 0.5, -50)
+        NoResults.BackgroundTransparency = 1
+        NoResults.Text = "😞 Aucun script trouvé\nEssayez d'autres mots-clés !"
+        NoResults.TextColor3 = Color3.fromRGB(150, 150, 150)
+        NoResults.Font = Enum.Font.Gotham
+        NoResults.TextSize = 18
+        NoResults.TextWrapped = true
+        NoResults.Parent = ResultsContainer
+        return
+    end
+    
+    -- Créer une carte pour chaque script
+    for i, script in ipairs(AllScriptsData) do
+        local ScriptCard = Instance.new("Frame")
+        ScriptCard.Size = UDim2.new(1, 0, 0, 320)
+        ScriptCard.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        ScriptCard.BorderSizePixel = 1
+        ScriptCard.BorderColor3 = Color3.fromRGB(50, 50, 50)
+        ScriptCard.LayoutOrder = i
+        ScriptCard.Parent = ResultsContainer
+        
+        -- Fond avec effet
+        local CardGradient = Instance.new("UIGradient")
+        CardGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 20))
+        })
+        CardGradient.Parent = ScriptCard
+        
+        -- En-tête de la carte
+        local CardHeader = Instance.new("Frame")
+        CardHeader.Size = UDim2.new(1, 0, 0, 80)
+        CardHeader.BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+        CardHeader.Parent = ScriptCard
+        
+        local CardTitle = Instance.new("TextLabel")
+        CardTitle.Size = UDim2.new(1, -20, 0, 50)
+        CardTitle.Position = UDim2.new(0, 10, 0, 10)
+        CardTitle.BackgroundTransparency = 1
+        CardTitle.Text = script.title or "Sans titre"
+        CardTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        CardTitle.Font = Enum.Font.GothamBold
+        CardTitle.TextSize = 16
+        CardTitle.TextXAlignment = Enum.TextXAlignment.Left
+        CardTitle.TextWrapped = true
+        CardTitle.TextTruncate = Enum.TextTruncate.AtEnd
+        CardTitle.Parent = CardHeader
+        
+        -- Badge du jeu
+        local GameBadge = Instance.new("TextLabel")
+        GameBadge.Size = UDim2.new(1, -20, 0, 20)
+        GameBadge.Position = UDim2.new(0, 10, 0, 60)
+        GameBadge.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        GameBadge.Text = "🎮 " .. (script.game and script.game.name or "Jeu inconnu")
+        GameBadge.TextColor3 = Color3.fromRGB(255, 255, 255)
+        GameBadge.Font = Enum.Font.Gotham
+        GameBadge.TextSize = 12
+        GameBadge.TextXAlignment = Enum.TextXAlignment.Left
+        GameBadge.Parent = CardHeader
+        
+        -- Corps de la carte
+        local CardBody = Instance.new("Frame")
+        CardBody.Size = UDim2.new(1, 0, 0, 180)
+        CardBody.Position = UDim2.new(0, 0, 0, 80)
+        CardBody.BackgroundTransparency = 1
+        CardBody.Parent = ScriptCard
+        
+        -- Badges d'information
+        local badges = {}
+        
+        if script.scriptType == "free" then
+            table.insert(badges, {Text = "🆓 GRATUIT", Color = Color3.fromRGB(0, 180, 0)})
+        else
+            table.insert(badges, {Text = "⭐ PREMIUM", Color = Color3.fromRGB(255, 165, 0)})
+        end
+        
+        if script.verified then
+            table.insert(badges, {Text = "✅ VÉRIFIÉ", Color = Color3.fromRGB(0, 120, 255)})
+        end
+        
+        if script.isUniversal then
+            table.insert(badges, {Text = "🌐 UNIVERSEL", Color = Color3.fromRGB(255, 42, 42)})
+        end
+        
+        if script.isPatched then
+            table.insert(badges, {Text = "⚠️ PATCHÉ", Color = Color3.fromRGB(200, 50, 50)})
+        end
+        
+        if script.key then
+            table.insert(badges, {Text = "🔑 CLÉ REQUISE", Color = Color3.fromRGB(180, 100, 255)})
+        end
+        
+        -- Afficher les badges
+        for j, badge in ipairs(badges) do
+            local Badge = Instance.new("TextLabel")
+            Badge.Size = UDim2.new(0.9, 0, 0, 25)
+            Badge.Position = UDim2.new(0.05, 0, 0, 10 + ((j-1) * 30))
+            Badge.BackgroundColor3 = badge.Color
+            Badge.Text = badge.Text
+            Badge.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Badge.Font = Enum.Font.GothamBold
+            Badge.TextSize = 11
+            Badge.Parent = CardBody
+        end
+        
+        -- Statistiques
+        local StatsFrame = Instance.new("Frame")
+        StatsFrame.Size = UDim2.new(1, -20, 0, 40)
+        StatsFrame.Position = UDim2.new(0, 10, 1, -50)
+        StatsFrame.BackgroundTransparency = 1
+        StatsFrame.Parent = CardBody
+        
+        local Views = Instance.new("TextLabel")
+        Views.Size = UDim2.new(0.5, 0, 1, 0)
+        Views.Position = UDim2.new(0, 0, 0, 0)
+        Views.BackgroundTransparency = 1
+        Views.Text = "👁️ " .. (script.views or 0) .. " vues"
+        Views.TextColor3 = Color3.fromRGB(180, 180, 180)
+        Views.Font = Enum.Font.Gotham
+        Views.TextSize = 11
+        Views.TextXAlignment = Enum.TextXAlignment.Left
+        Views.Parent = StatsFrame
+        
+        local Date = Instance.new("TextLabel")
+        Date.Size = UDim2.new(0.5, 0, 1, 0)
+        Date.Position = UDim2.new(0.5, 0, 0, 0)
+        Date.BackgroundTransparency = 1
+        Date.Text = "📅 " .. (script.updatedAt and string.sub(script.updatedAt, 1, 10) or "N/A")
+        Date.TextColor3 = Color3.fromRGB(180, 180, 180)
+        Date.Font = Enum.Font.Gotham
+        Date.TextSize = 11
+        Date.TextXAlignment = Enum.TextXAlignment.Right
+        Date.Parent = StatsFrame
+        
+        -- Boutons d'action
+        local ActionsFrame = Instance.new("Frame")
+        ActionsFrame.Size = UDim2.new(1, -20, 0, 60)
+        ActionsFrame.Position = UDim2.new(0, 10, 1, -110)
+        ActionsFrame.BackgroundTransparency = 1
+        ActionsFrame.Parent = CardBody
+        
+        local ExecuteButton = Instance.new("TextButton")
+        ExecuteButton.Size = UDim2.new(1, 0, 0, 50)
+        ExecuteButton.Position = UDim2.new(0, 0, 0, 0)
+        ExecuteButton.BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+        ExecuteButton.Text = "⚡ EXÉCUTER LE SCRIPT"
+        ExecuteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ExecuteButton.Font = Enum.Font.GothamBlack
+        ExecuteButton.TextSize = 14
+        ExecuteButton.Parent = ActionsFrame
+        
+        -- Événements des boutons
+        ExecuteButton.MouseButton1Click:Connect(function()
+            if script.script then
+                local success, err = pcall(function()
+                    loadstring(script.script)()
+                end)
+                
+                if success then
+                    -- Notification verte
+                    local notification = Instance.new("TextLabel")
+                    notification.Size = UDim2.new(1, -40, 0, 40)
+                    notification.Position = UDim2.new(0, 20, 1, -150)
+                    notification.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                    notification.Text = "✅ Script exécuté avec succès !"
+                    notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    notification.Font = Enum.Font.GothamBold
+                    notification.TextSize = 14
+                    notification.Parent = MainFrame
+                    
+                    game:GetService("Debris"):AddItem(notification, 3)
+                else
+                    warn("Erreur d'exécution:", err)
+                end
+            else
+                -- Notification rouge
+                local notification = Instance.new("TextLabel")
+                notification.Size = UDim2.new(1, -40, 0, 40)
+                notification.Position = UDim2.new(0, 20, 1, -150)
+                notification.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                notification.Text = "❌ Script non disponible"
+                notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+                notification.Font = Enum.Font.GothamBold
+                notification.TextSize = 14
+                notification.Parent = MainFrame
+                
+                game:GetService("Debris"):AddItem(notification, 3)
+            end
+        end)
+        
+        -- Animation au survol
+        ScriptCard.MouseEnter:Connect(function()
+            TweenService:Create(ScriptCard, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+                BorderColor3 = Color3.fromRGB(255, 42, 42)
+            }):Play()
+            
+            TweenService:Create(ExecuteButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+            }):Play()
+        end)
+        
+        ScriptCard.MouseLeave:Connect(function()
+            TweenService:Create(ScriptCard, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                BorderColor3 = Color3.fromRGB(50, 50, 50)
+            }):Play()
+            
+            TweenService:Create(ExecuteButton, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(255, 42, 42)
+            }):Play()
+        end)
+    end
+    
+    -- Ajuster la taille du container
+    local columns = math.floor(ResultsContainer.AbsoluteSize.X / 265)
+    local rows = math.ceil(#AllScriptsData / columns)
+    ResultsContainer.CanvasSize = UDim2.new(0, 0, 0, rows * 335)
+end
+
+-- Événements
+SearchButton.MouseButton1Click:Connect(function()
+    SearchScripts()
+end)
+
+SearchBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        SearchScripts()
+    end
+end)
+
+-- Animation du spinner
+spawn(function()
+    while true do
+        if Loader.Visible then
+            for i = 0, 360, 15 do
+                if not Loader.Visible then break end
+                Spinner.Rotation = i
+                wait(0.05)
+            end
+        else
+            wait(0.1)
+        end
+    end
+end)
+
+-- Drag & drop
+local dragging = false
+local dragInput, mousePos, framePos
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        mousePos = input.Position
+        framePos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        MainFrame.Position = UDim2.new(
+            framePos.X.Scale, 
+            framePos.X.Offset + delta.X,
+            framePos.Y.Scale, 
+            framePos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Exemples automatiques
+local function ShowExamples()
+    local examples = {
+        "Exemples de recherche :",
+        "",
+        "•  blox fruits  → Tous les scripts Blox Fruits",
+        "•  admin  → Tous les panneaux admin",
+        "•  arsenal  → Scripts pour Arsenal",
+        "•  adopt me  → Scripts Adopt Me!",
+        "•  autofarm  → Scripts d'auto-farm",
+        "•  hub  → Hubs universels",
+        "•  script  → Tous les scripts",
+        "",
+        "Le hub va charger jusqu'à 100 résultats !"
+    }
+    
+    for _, line in ipairs(examples) do
+        print(line)
+    end
+end
+
+-- Message de bienvenue
+print([[
+
+╔══════════════════════════════════════════════╗
+║   POWER ERECTERS - HUB COMPLET V3.0         ║
+║                                              ║
+║  ✓ Affiche TOUS les résultats               ║
+║  ✓ Jusqu'à 100 scripts par recherche        ║
+║  ✓ Interface professionnelle                ║
+║  ✓ Exécution directe en un clic             ║
+║  ✓ Filtres rapides                          ║
+║                                              ║
+║  Tape ta recherche et appuie sur ENTER      ║
+╚══════════════════════════════════════════════╝
+
+]])
+
+ShowExamples()
+
+-- Charger les scripts récents au démarrage
+SearchBox.Text = ""
+SearchScripts()
